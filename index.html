@@ -56,10 +56,17 @@ input[type=text]:focus{border-color:var(--gold);}
 
 /* -- Game screen -- */
 #gameScreen{padding:0;position:relative;}
+.scene-wrap{position:relative;flex-shrink:0;}
 .scene-art{height:34vh;min-height:180px;position:relative;overflow:hidden;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;transition:background 0.6s;}
 .scene-art svg{width:100%;height:100%;}
-.party-strip{display:flex;gap:8px;padding:8px 12px;background:rgba(0,0,0,.25);overflow-x:auto;flex-shrink:0;}
+.scene-icon-badge{position:absolute;right:14px;bottom:-14px;width:64px;height:64px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #2a1f45, #150f26);border:3px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;font-size:2em;box-shadow:0 6px 18px rgba(0,0,0,.5);
+  z-index:5;transition:transform .3s;}
+.scene-icon-badge.pulse{animation:iconPulse .5s ease;}
+@keyframes iconPulse{0%{transform:scale(0.6) rotate(-8deg);opacity:0;}60%{transform:scale(1.15) rotate(4deg);opacity:1;}100%{transform:scale(1) rotate(0);}}
+.party-strip{display:flex;gap:8px;padding:8px 12px 8px 12px;margin-top:4px;background:rgba(0,0,0,.25);overflow-x:auto;flex-shrink:0;}
 .mini-hero{display:flex;align-items:center;gap:6px;background:var(--panel);border-radius:10px;padding:6px 10px;white-space:nowrap;font-size:.82em;border:2px solid transparent;}
 .mini-hero.active{border-color:var(--gold);}
 .mini-hp{width:46px;height:6px;background:#3a2a5a;border-radius:4px;overflow:hidden;margin-left:4px;}
@@ -185,7 +192,10 @@ footer.safe{height:0;}
   <!-- GAME SCREEN -->
   <div class="screen" id="gameScreen">
     <div class="hud"><span>Chapter <b id="hudChapter">1</b> of <b id="hudTotal">6</b></span><span id="hudGold">💰 0</span></div>
-    <div class="scene-art" id="sceneArt"></div>
+    <div class="scene-wrap">
+      <div class="scene-art" id="sceneArt"></div>
+      <div class="scene-icon-badge" id="sceneIcon"></div>
+    </div>
     <div class="party-strip" id="partyStrip"></div>
     <div class="story-area">
       <div class="turn-banner" id="turnBanner"></div>

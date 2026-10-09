@@ -73,6 +73,42 @@ function randomLoot(rarityWeights){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
+// -------------------- MENTOR THREAD (continuity across chapters) --------------------
+// A single recurring mentor character ties the story together — referenced at
+// every chapter transition so the adventure feels connected, not episodic.
+const MENTOR_NAMES = ["Old Fenwick", "Sister Marrow", "Captain Oslo", "the hermit Yara"];
+const MENTOR_LINES = {
+  village: ["{mentor} presses a worn travel charm into your hands. \"Keep your wits sharper than your blades out there.\"",
+            "{mentor} watches you go from the village gate, calling out, \"Come back heroes, not legends carved in stone!\""],
+  forest: ["Somewhere behind you, {mentor}'s voice seems to echo through the trees: \"The forest remembers kindness — and cruelty.\"",
+           "You find a strip of cloth tied to a branch — {mentor} passed this way once, and left a sign for those who'd follow."],
+  mine: ["Scratched into a support beam, you find initials and a date — {mentor} worked these mines, long before becoming who they are now.",
+         "{mentor} once told you these tunnels \"remember every miner who ever doubted they'd see daylight again.\""],
+  ruins: ["A half-legible journal page flutters near a collapsed shelf — {mentor}'s handwriting, warning of exactly this chamber.",
+          "{mentor}'s old field notes, tucked in your pack, mention this ruin by name: \"tread carefully, it was a temple once.\""],
+  approach: ["{mentor}'s final words before you left echo now: \"{dragonName} does not fear strength alone. It fears the prepared.\"",
+             "You touch the charm {mentor} gave you back in the village — somehow, it feels warmer here, closer to the mountain."],
+  finale: ["For a heartbeat you swear you hear {mentor}'s voice cut through the heat: \"Now. Everything you've learned — now.\"",
+           "{mentor} isn't here, not really — but everything they taught you walks into this chamber with you."]
+};
+
+// -------------------- ENCOUNTER ICONS (what the scene art depicts) --------------------
+// Each node id maps to an emoji + accent color so the illustration actually
+// shows what's happening in that specific encounter, not just a generic backdrop.
+const NODE_ICONS = {
+  market_choice:"🛒", festival_prep:"🎪", elder_warning:"📜", worried_parent:"😟",
+  wolf_pack:"🐺", spider_ambush:"🕷️", ancient_tree:"🌳", river_crossing:"🌊",
+  lost_traveler:"🧭", fey_trickster:"🧚",
+  cave_collapse:"⛰️", gas_pocket:"☁️", crystal_puzzle:"💎", underground_lake:"🕳️",
+  miner_ghosts:"👻", ore_golem:"🗿",
+  guardian_statue:"🗽", collapsed_library:"📚", trapped_hallway:"🎯", mirror_maze:"🪞",
+  cursed_relic:"🔮", sealed_tomb:"⚱️",
+  villain_lieutenant:"🗡️", ambush_archers:"🏹", final_prep:"🧘", omen_reading:"🔱",
+  dragon_phase1:"🐉", dragon_phase1_alt:"🔥", dragon_phase2:"🐲", dragon_phase2_alt:"🔥",
+  dragon_final:"⚔️", dragon_final_alt:"✨"
+};
+function nodeIcon(id){ return NODE_ICONS[id] || "❓"; }
+
 // -------------------- FLAVOR POOLS (randomized text seasoning) --------------------
 const FLAVOR = {
   weather: ["A cool breeze drifts through", "Thunder rumbles far away over", "Golden afternoon light spills across", "A light mist hangs over", "Birdsong echoes across", "Dark clouds gather above", "A warm hush settles over"],
@@ -95,7 +131,22 @@ const OUTCOME_FLAVOR = {
 // Numeric jitter so the same tier never grants/costs the exact same amount twice.
 function jitter(n){ if(!n) return n; const f = 0.8 + Math.random()*0.4; const v = Math.round(n*f); return Math.max(1, v); }
 
-// -------------------- PREPARATION FLAGS --------------------
+// -------------------- PREP FLAG DESCRIPTIONS (for the personalized ending) --------------------
+const PREP_FLAG_LABELS = {
+  safe_route:"chose the safer road out of the village",
+  dragon_lore:"learned an old legend about the dragon's fear of starlit song",
+  fast_route:"scouted a faster trail out of town",
+  village_clue:"pieced together clues about a missing child",
+  forest_ward:"deciphered a protective ward from ancient tree-runes",
+  good_deed:"helped a lost traveler find their way home",
+  mine_blessing:"earned a blessing from old mining spirits",
+  lake_secret:"uncovered a hidden safe path beneath an underground lake",
+  ruins_lore:"found a forgotten scroll of old magic in the ruins",
+  mirror_solved:"solved the mirror maze's true-path riddle",
+  omen_insight:"deciphered an omen revealing the dragon's attack pattern",
+  lair_shortcut:"scouted a hidden shortcut into the dragon's lair",
+  dragon_weakness:"studied exactly how to strike the dragon's weak point"
+};
 // These are set by earlier-chapter choices and cashed in during the finale —
 // so scouting ahead, learning dragon lore, etc. actually matters mechanically.
 const PREP_FLAGS = ["safe_route","dragon_lore","fast_route","village_clue","forest_ward","good_deed",
@@ -107,14 +158,85 @@ const PREP_FLAGS = ["safe_route","dragon_lore","fast_route","village_clue","fore
 const DAMAGE_SCALE = {1:0.65, 2:0.85, 3:1.0, 4:1.15};
 
 // -------------------- SCENE BACKGROUNDS (inline SVG, no image loading) --------------------
+// Richer, chapter-specific illustrations: layered gradients, silhouettes and
+// small thematic details so each background actually depicts its setting.
 const SCENES = {
-  village: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#2b4a6e"/><rect y="150" width="400" height="70" fill="#3a6b3a"/><polygon points="40,150 70,100 100,150" fill="#6b4a3a"/><rect x="55" y="120" width="30" height="30" fill="#8a6a4a"/><polygon points="150,150 190,90 230,150" fill="#7a5a4a"/><rect x="170" y="115" width="40" height="35" fill="#9a7a5a"/><circle cx="330" cy="50" r="24" fill="#ffe9a8"/><polygon points="260,150 290,110 320,150" fill="#6b4a3a"/></svg>`,
-  forest: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#1c3b2e"/><rect y="170" width="400" height="50" fill="#163325"/><polygon points="30,170 60,60 90,170" fill="#204d33"/><polygon points="90,170 130,40 170,170" fill="#245a3a"/><polygon points="160,170 200,70 240,170" fill="#1e4a30"/><polygon points="230,170 270,50 310,170" fill="#245a3a"/><polygon points="300,170 340,80 380,170" fill="#204d33"/><circle cx="60" cy="30" r="18" fill="#dfe9c0" opacity="0.7"/></svg>`,
-  cave: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#1a1422"/><polygon points="0,0 60,0 10,90" fill="#2a2235"/><polygon points="400,0 340,0 390,80" fill="#2a2235"/><polygon points="0,220 70,220 20,120" fill="#241d30"/><polygon points="400,220 320,220 380,130" fill="#241d30"/><circle cx="200" cy="130" r="40" fill="#5a4a7a" opacity="0.4"/><circle cx="90" cy="60" r="4" fill="#ffd54a"/><circle cx="310" cy="90" r="4" fill="#ffd54a"/><circle cx="200" cy="40" r="4" fill="#ffd54a"/></svg>`,
-  ruins: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#3a2e4e"/><rect y="170" width="400" height="50" fill="#2a2038"/><rect x="40" y="60" width="26" height="110" fill="#6a5a7a"/><rect x="110" y="30" width="26" height="140" fill="#75658a"/><rect x="200" y="80" width="26" height="90" fill="#6a5a7a"/><rect x="290" y="50" width="26" height="120" fill="#75658a"/><polygon points="90,170 300,170 320,190 70,190" fill="#241c30"/><circle cx="340" cy="40" r="20" fill="#d8c8ff" opacity="0.5"/></svg>`,
-  lair_approach: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#4a1a1a"/><rect y="180" width="400" height="40" fill="#2e0f0f"/><polygon points="0,180 100,40 220,180" fill="#5a2424"/><polygon points="160,180 280,20 400,180" fill="#652a2a"/><circle cx="200" cy="90" r="14" fill="#ff9a4a" opacity="0.8"/><circle cx="130" cy="150" r="6" fill="#ffb84a"/><circle cx="270" cy="150" r="6" fill="#ffb84a"/></svg>`,
-  lair_final: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#2a0e0e"/><polygon points="0,220 0,120 120,220" fill="#3a1414"/><polygon points="400,220 400,100 260,220" fill="#3a1414"/><circle cx="200" cy="90" r="55" fill="#ff5a1a" opacity="0.55"/><circle cx="200" cy="90" r="30" fill="#ffd54a" opacity="0.6"/><polygon points="130,220 200,60 270,220" fill="#200a0a" opacity="0.6"/></svg>`,
-  victory: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><rect width="400" height="220" fill="#1a2a4e"/><circle cx="330" cy="50" r="26" fill="#ffe9a8"/><rect y="180" width="400" height="40" fill="#2e5a3a"/><polygon points="30,180 70,100 110,180" fill="#2a6b3a"/><polygon points="250,180 300,90 350,180" fill="#2a6b3a"/><polygon points="150,150 200,60 250,150" fill="#ffd54a" opacity="0.3"/></svg>`
+  village: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="skyV" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a7bb5"/><stop offset="100%" stop-color="#8fb8dd"/></linearGradient>
+    <linearGradient id="hillV" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a8a4a"/><stop offset="100%" stop-color="#2f5c2f"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skyV)"/>
+    <circle cx="335" cy="42" r="22" fill="#fff3c4"/>
+    <ellipse cx="80" cy="50" rx="34" ry="12" fill="#fff" opacity=".65"/><ellipse cx="260" cy="35" rx="40" ry="10" fill="#fff" opacity=".55"/>
+    <path d="M0,150 Q100,120 200,150 T400,140 L400,220 L0,220 Z" fill="url(#hillV)"/>
+    <polygon points="45,150 72,100 99,150" fill="#8a6a46"/><polygon points="58,105 86,105 72,85" fill="#b4512f"/><rect x="63" y="122" width="18" height="22" fill="#5c4530"/>
+    <polygon points="140,155 178,95 216,155" fill="#9a7a52"/><polygon points="155,100 201,100 178,76" fill="#c45a38"/><rect x="167" y="128" width="22" height="27" fill="#5c4530"/><circle cx="195" cy="118" r="4" fill="#ffd96b"/>
+    <polygon points="230,155 262,105 294,155" fill="#8a6a46"/><polygon points="242,110 282,110 262,88" fill="#b4512f"/><rect x="252" y="128" width="20" height="27" fill="#5c4530"/>
+    <rect x="310" y="170" width="6" height="35" fill="#6b4a2e"/><circle cx="313" cy="162" r="14" fill="#5a8a4a"/>
+    <rect y="200" width="400" height="20" fill="#3f6b3f"/>
+    <circle cx="150" cy="208" r="3" fill="#ffe9a8"/><circle cx="230" cy="210" r="3" fill="#ffe9a8"/></svg>`,
+
+  forest: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="skyF" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#16321f"/><stop offset="100%" stop-color="#2d5c3a"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skyF)"/>
+    <circle cx="70" cy="40" r="20" fill="#dfe9c0" opacity=".55"/>
+    <polygon points="20,190 55,55 90,190" fill="#1d4a2c"/><polygon points="60,190 100,30 140,190" fill="#255a34"/>
+    <polygon points="120,190 165,45 210,190" fill="#1a4228"/><polygon points="190,190 235,25 280,190" fill="#255a34"/>
+    <polygon points="260,190 300,50 340,190" fill="#1d4a2c"/><polygon points="320,190 365,65 400,190" fill="#255a34"/>
+    <rect y="190" width="400" height="30" fill="#132c1c"/>
+    <path d="M30,210 Q60,200 90,210 T160,206 T240,210 T320,205 T400,210" stroke="#0f2417" stroke-width="3" fill="none" opacity=".6"/>
+    <circle cx="340" cy="35" r="3" fill="#dfe9c0"/><circle cx="310" cy="60" r="2" fill="#dfe9c0" opacity=".7"/></svg>`,
+
+  cave: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><radialGradient id="glowC" cx="50%" cy="55%" r="55%"><stop offset="0%" stop-color="#6a5a9a" stop-opacity=".55"/><stop offset="100%" stop-color="#6a5a9a" stop-opacity="0"/></radialGradient></defs>
+    <rect width="400" height="220" fill="#161020"/>
+    <polygon points="0,0 70,0 15,100 0,90" fill="#241c33"/><polygon points="400,0 330,0 385,90 400,80" fill="#241c33"/>
+    <polygon points="0,220 80,220 25,130 0,145" fill="#1e1729"/><polygon points="400,220 320,220 375,140 400,155" fill="#1e1729"/>
+    <circle cx="200" cy="120" r="55" fill="url(#glowC)"/>
+    <polygon points="140,180 200,70 260,180" fill="#2a2240" opacity=".5"/>
+    <circle cx="95" cy="55" r="4" fill="#ffd54a"/><circle cx="315" cy="85" r="4" fill="#ffd54a"/><circle cx="200" cy="35" r="4" fill="#ffd54a"/>
+    <circle cx="95" cy="55" r="9" fill="#ffd54a" opacity=".25"/><circle cx="315" cy="85" r="9" fill="#ffd54a" opacity=".25"/>
+    <rect y="195" width="400" height="25" fill="#0f0a18"/></svg>`,
+
+  ruins: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="skyR" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2c2140"/><stop offset="100%" stop-color="#4a3a60"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skyR)"/>
+    <circle cx="345" cy="38" r="22" fill="#d8c8ff" opacity=".55"/>
+    <rect y="180" width="400" height="40" fill="#231a34"/>
+    <rect x="35" y="55" width="28" height="125" fill="#6a5a7f"/><rect x="33" y="50" width="32" height="10" fill="#584a70"/>
+    <rect x="105" y="25" width="28" height="155" fill="#78678f"/><rect x="103" y="20" width="32" height="10" fill="#584a70"/>
+    <rect x="195" y="75" width="28" height="105" fill="#6a5a7f"/>
+    <rect x="285" y="45" width="28" height="135" fill="#78678f"/><rect x="283" y="40" width="32" height="10" fill="#584a70"/>
+    <polygon points="85,180 310,180 330,200 65,200" fill="#201830"/>
+    <circle cx="150" cy="140" r="10" fill="#ffd54a" opacity=".4"/><circle cx="260" cy="150" r="7" fill="#d8c8ff" opacity=".5"/></svg>`,
+
+  lair_approach: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="skyA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5a1c1c"/><stop offset="100%" stop-color="#b4512a"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skyA)"/>
+    <circle cx="200" cy="95" r="34" fill="#ff8a3a" opacity=".55"/>
+    <rect y="185" width="400" height="35" fill="#2e0f0f"/>
+    <polygon points="0,185 100,35 220,185" fill="#5a2424"/><polygon points="160,185 280,15 400,185" fill="#652a2a"/>
+    <path d="M90,185 Q140,140 110,100" stroke="#ffb84a" stroke-width="3" fill="none" opacity=".6"/>
+    <circle cx="130" cy="150" r="5" fill="#ffb84a"/><circle cx="270" cy="150" r="5" fill="#ffb84a"/><circle cx="200" cy="175" r="4" fill="#ffb84a"/>
+    <path d="M150,60 Q200,30 260,65" stroke="#2a0a0a" stroke-width="8" fill="none" opacity=".4"/></svg>`,
+
+  lair_final: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><radialGradient id="fireF" cx="50%" cy="45%" r="60%"><stop offset="0%" stop-color="#ffd54a"/><stop offset="45%" stop-color="#ff5a1a" stop-opacity=".7"/><stop offset="100%" stop-color="#2a0e0e" stop-opacity="0"/></radialGradient></defs>
+    <rect width="400" height="220" fill="#1c0808"/>
+    <polygon points="0,220 0,110 130,220" fill="#3a1414"/><polygon points="400,220 400,95 255,220" fill="#3a1414"/>
+    <circle cx="200" cy="95" r="70" fill="url(#fireF)"/>
+    <path d="M110,200 Q200,40 290,200" stroke="#1a0606" stroke-width="22" fill="none" opacity=".55"/>
+    <ellipse cx="200" cy="205" rx="130" ry="14" fill="#ffd54a" opacity=".25"/>
+    <circle cx="130" cy="150" r="3" fill="#ffb84a"/><circle cx="270" cy="140" r="3" fill="#ffb84a"/><circle cx="200" cy="170" r="3" fill="#ffb84a"/></svg>`,
+
+  victory: `<svg viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="skyW" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1a2a55"/><stop offset="100%" stop-color="#4a6aa8"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skyW)"/>
+    <circle cx="330" cy="45" r="28" fill="#ffe9a8"/>
+    <path d="M90,60 Q200,0 310,60" stroke="#ffd54a" stroke-width="5" fill="none" opacity=".55"/>
+    <rect y="180" width="400" height="40" fill="#2e5a3a"/>
+    <polygon points="30,180 70,95 110,180" fill="#2a6b3a"/><polygon points="250,180 300,80 350,180" fill="#2a6b3a"/>
+    <polygon points="150,145 200,55 250,145" fill="#ffd54a" opacity=".3"/>
+    <circle cx="90" cy="150" r="3" fill="#ffe9a8"/><circle cx="160" cy="130" r="3" fill="#ffe9a8"/><circle cx="310" cy="140" r="3" fill="#ffe9a8"/></svg>`
 };
 
 // -------------------- CHAPTER / NODE SYSTEM --------------------

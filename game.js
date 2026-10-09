@@ -101,6 +101,7 @@ function template(str){
     .replace(/\{villainTitle\}/g, r.villainTitle)
     .replace(/\{dragonName\}/g, r.dragonName)
     .replace(/\{treasureFlavor\}/g, pick(FLAVOR.treasureFlavor))
+    .replace(/\{mentor\}/g, r.mentor)
     .replace(/\{npc\}/g, pick(FLAVOR.npcNames));
 }
 
@@ -235,7 +236,8 @@ const UI = {
     STATE.run = {
       village: pick(VILLAGE_NAMES),
       villainTitle: pick(FLAVOR.villainTitle),
-      dragonName: pick(FLAVOR.dragonName)
+      dragonName: pick(FLAVOR.dragonName),
+      mentor: pick(MENTOR_NAMES)
     };
     // build chapter plan: for each slot, randomly pick ONE of its alternative
     // encounters, then shuffle slot order — so both WHICH scenes appear and
@@ -257,8 +259,10 @@ const UI = {
     document.getElementById('hudTotal').textContent = STATE.chapterPlan.length;
     document.getElementById('hudGold').textContent = '💰 ' + STATE.gold;
     document.getElementById('sceneArt').innerHTML = SCENES[plan.def.scene];
+    document.getElementById('sceneIcon').textContent = '';
     document.getElementById('turnBanner').textContent = 'Chapter ' + (STATE.chapterIdx+1) + ': ' + plan.def.title;
-    document.getElementById('storyText').textContent = template(pick(plan.def.intro));
+    const mentorLine = MENTOR_LINES[plan.def.id] ? ' ' + template(pick(MENTOR_LINES[plan.def.id])) : '';
+    document.getElementById('storyText').textContent = template(pick(plan.def.intro)) + mentorLine;
     this.renderPartyStrip();
     const choices = document.getElementById('choices');
     choices.innerHTML = '';
@@ -305,6 +309,12 @@ const UI = {
     document.getElementById('storyText').textContent = template(pick(node.text));
     document.getElementById('hudGold').textContent = '💰 ' + STATE.gold;
     this.renderPartyStrip();
+
+    const iconEl = document.getElementById('sceneIcon');
+    iconEl.textContent = nodeIcon(node.id);
+    iconEl.classList.remove('pulse');
+    void iconEl.offsetWidth; // restart animation
+    iconEl.classList.add('pulse');
 
     const choicesEl = document.getElementById('choices');
     choicesEl.innerHTML = '';
@@ -598,9 +608,16 @@ const UI = {
 
   gameOver(victory){
     showScreen('screen-end');
+    document.getElementById('sceneIcon') && (document.getElementById('sceneIcon').textContent = '');
     document.getElementById('endEmoji').textContent = victory ? '🏆' : '💀';
     document.getElementById('endTitle').textContent = victory ? 'Victory!' : 'Defeated...';
-    document.getElementById('endText').textContent = template(pick(victory ? ENDINGS_VICTORY : ENDINGS_DEFEAT));
+    const flagsHit = PREP_FLAGS.filter(f => STATE.run[f]);
+    let recap = '';
+    if(flagsHit.length){
+      const labels = flagsHit.map(f => PREP_FLAG_LABELS[f]).filter(Boolean);
+      recap = ' Along the way, your party ' + labels.join(', ') + (labels.length>1 ? ', and more' : '') + ' — choices that shaped everything that followed.';
+    }
+    document.getElementById('endText').textContent = template(pick(victory ? ENDINGS_VICTORY : ENDINGS_DEFEAT)) + recap;
     const statsEl = document.getElementById('endStats');
     statsEl.innerHTML = STATE.heroes.map(h=>{
       const cls = getClass(h.classId);
