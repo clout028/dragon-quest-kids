@@ -191,17 +191,19 @@ const UI = {
       const card = document.createElement('div');
       card.className = 'class-card' + (STATE.selectedClassId===c.id ? ' selected':'');
       card.innerHTML = `
-        <div class="class-emoji">${c.emoji}</div>
+        <div class="class-sprite-wrap"><canvas class="class-sprite-canvas" data-cls="${c.id}"></canvas></div>
         <div class="class-name" style="color:${c.color}">${c.name}</div>
         <div class="class-desc">${c.desc}</div>
         <div class="stat-bars">
           ${STATS.map(s=>`<div class="stat-bar-row"><span class="stat-bar-label">${s}</span>
             <div class="stat-bar-track"><div class="stat-bar-fill" style="width:${c.base[s]*9}%;background:${STAT_INFO[s].color}"></div></div></div>`).join('')}
         </div>
-        <div class="small" style="margin-top:4px;">❤️ ${c.hp} HP</div>
+        <div class="small" style="margin-top:4px;">HP ${c.hp}</div>
       `;
-      card.onclick = ()=>{ STATE.selectedClassId = c.id; this.renderCreate(false); };
+      card.onclick = ()=>{ SFX.click(); STATE.selectedClassId = c.id; this.renderCreate(false); };
       grid.appendChild(card);
+      const cv = card.querySelector('canvas');
+      drawSprite(cv, CLASS_SPRITES[c.id] || CLASS_SPRITES.warrior, 4);
     });
 
     const btn = document.getElementById('createNextBtn');
@@ -258,8 +260,8 @@ const UI = {
     document.getElementById('hudChapter').textContent = STATE.chapterIdx+1;
     document.getElementById('hudTotal').textContent = STATE.chapterPlan.length;
     document.getElementById('hudGold').textContent = '💰 ' + STATE.gold;
-    document.getElementById('sceneArt').innerHTML = SCENES[plan.def.scene];
-    document.getElementById('sceneIcon').textContent = '';
+    PX.render(document.getElementById('sceneCanvas'), plan.def.scene);
+    document.getElementById('sceneIconCanvas').getContext('2d').clearRect(0,0,999,999);
     document.getElementById('turnBanner').textContent = 'Chapter ' + (STATE.chapterIdx+1) + ': ' + plan.def.title;
     const mentorLine = MENTOR_LINES[plan.def.id] ? ' ' + template(pick(MENTOR_LINES[plan.def.id])) : '';
     document.getElementById('storyText').textContent = template(pick(plan.def.intro)) + mentorLine;
@@ -311,7 +313,7 @@ const UI = {
     this.renderPartyStrip();
 
     const iconEl = document.getElementById('sceneIcon');
-    iconEl.textContent = nodeIcon(node.id);
+    drawSprite(document.getElementById('sceneIconCanvas'), getEncounterSprite(node.id), 3);
     iconEl.classList.remove('pulse');
     void iconEl.offsetWidth; // restart animation
     iconEl.classList.add('pulse');
@@ -608,7 +610,7 @@ const UI = {
 
   gameOver(victory){
     showScreen('screen-end');
-    document.getElementById('sceneIcon') && (document.getElementById('sceneIcon').textContent = '');
+    PX.render(document.getElementById('endSceneCanvas'), victory ? 'victory' : 'lair_final');
     document.getElementById('endEmoji').textContent = victory ? '🏆' : '💀';
     document.getElementById('endTitle').textContent = victory ? 'Victory!' : 'Defeated...';
     const flagsHit = PREP_FLAGS.filter(f => STATE.run[f]);
@@ -660,4 +662,6 @@ function flashInvalid(){
 document.addEventListener('DOMContentLoaded', ()=>{
   SFX.initToggleIcon();
   UI.checkResume();
+  const titleCanvas = document.getElementById('titleDragonCanvas');
+  if(titleCanvas) drawSprite(titleCanvas, TITLE_DRAGON_SPRITE, 4);
 });
